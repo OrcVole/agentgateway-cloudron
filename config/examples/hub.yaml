@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Combined example: an LLM endpoint and MCP tools on ONE data-plane listener.
+#
+# Add the routes below to binds[0].listeners[0].routes in /app/data/config.yaml (the default config
+# already provides the bind, the listener, and the API key), or adapt the whole bind. Clients reach
+# both at https://<data-plane>/v1/chat/completions and https://<data-plane>/mcp with the data-plane
+# API key as a bearer token.
+#
+# All upstream secrets are environment references ($VAR), set in the app Environment, so saves from
+# the admin UI never expose or lose them. All cross-app hosts are PUBLIC domains, never localhost.
+#
+# Confirmed against agentgateway v1.3 on Cloudron (see config/examples/ollama.yaml):
+#   - LLM goes on a /v1 route with an `ai` backend, `hostOverride` ("host:port"), and `backendTLS`
+#     for an HTTPS upstream. Do NOT use the top-level `llm:` section here: it serves on its own
+#     port, not this data-plane listener. (That top-level form is where the v1.3 virtual-model and
+#     failover feature lives; see the upstream docs if you want client-driven model selection.)
+#   - MCP goes on a /mcp route with an `mcp` backend that aggregates one or more targets.
+
+- name: llm
+  matches:
+    - path:
+        pathPrefix: /v1
+  policies:
+    backendAuth:
+      key: "$LLM_API_KEY"               # your provider key or LAN host token, set in the Environment
+    backendTLS: {}                      # upstream is HTTPS
+  backends:
+    - ai:
+        name: upstream-llm
+        provider:
+          openAI:
+            model: "your-model"         # pin a tag, never :latest
+        hostOverride: "llm.example.com:443"
+
+- name: mcp
+  matches:
+    - path:
+        pathPrefix: /mcp
+  policies:
+    cors:
+      allowOrigins: ["*"]
+      allowHeaders: [mcp-protocol-version, content-type, cache-control]
+      exposeHeaders: ["Mcp-Session-Id"]
+  backends:
+    - mcp:
+        targets:
+          - name: qdrant
+            stdio:
+              cmd: uvx
+              args: ["mcp-server-qdrant"]
+              env:
+                QDRANT_URL: "https://qdrant.example.com"
+                QDRANT_API_KEY: "$QDRANT_API_KEY"
+                COLLECTION_NAME: "knowledge"

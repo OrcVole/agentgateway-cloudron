@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Populate the admin LLM dashboard (the LLM panel, the cost view, and virtual models) with a
+# TOP-LEVEL `llm:` registry. This is DISTINCT from the data-plane /v1 route in
+# config/examples/ollama.yaml: that route serves chat completions; this registry drives the admin
+# UI's LLM section. They are independent and share no listener or port, so you can run both.
+#
+# Merge the `llm:` block and the `modelCatalog` line below into /app/data/config.yaml (the default
+# already has a `config:` section, so add `modelCatalog` inside it next to `adminAddr`), then
+# restart. Until a top-level `llm:` is set, the admin panel shows "LLM config is not initialized";
+# that message is harmless and only concerns this dashboard, not the /v1 route.
+#
+# Do NOT add this to the shipped default config: it references a provider key via $VAR, and a fresh
+# install with that variable unset will not boot. The inert default stays MCP-only.
+#
+# Cost view: dollar cost needs pricing from `config.modelCatalog`, a list of file sources you
+# provide (each entry is `{ file: <path to a pricing JSON> }`). A local Ollama model has no pricing,
+# so its cost reads ZERO; token counts still appear. Virtual models and failover are a v1.3 registry
+# feature; check the upstream agentgateway docs for the current syntax, which has changed across
+# versions (do not copy the older `models[].virtual` form, which v1.3 no longer accepts).
+
+config:
+  # adminAddr (already in your config) stays; add the pricing catalog here.
+  modelCatalog:
+    - file: "/app/data/model-pricing.json"
+
+llm:
+  models:
+    - name: "default"
+      provider: openAI
+      params:
+        baseUrl: "https://ollama.example.com/v1"   # your provider or Ollama OpenAI-compatible base
+        apiKey: "$OLLAMA_API_KEY"                   # set in the app Environment

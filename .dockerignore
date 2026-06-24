@@ -1,0 +1,19 @@
+# Keep the Docker build context small. The image needs only the Dockerfile, start.sh, and
+# config/config.yaml; everything else is documentation or tooling.
+.git
+.gitignore
+/agentgateway/
+docs/
+*.swp
+*.tmp
+.DS_Store
+# Local state and secrets must never enter the build context or the image
+ollamaAPI.txt
+.cloudron.json
+*.local
+.env
+*.key
+*.pem
+secrets*
+orcvole-token.txt
+*-token.txt

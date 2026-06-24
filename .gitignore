@@ -1,0 +1,12 @@
+# Upstream source clone placeholder (we consume the official image, not the source)
+/agentgateway/
+# Local-only artifacts and OS cruft
+*.local
+.env
+.DS_Store
+ollamaAPI.txt
+# Local-only: forum announcement draft (not part of the published package)
+docs/forum-announcement.md
+orcvole-token.txt
+*-token.txt
+agentgateway.webp

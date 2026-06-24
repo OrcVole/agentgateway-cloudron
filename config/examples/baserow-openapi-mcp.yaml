@@ -1,0 +1,36 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# TEMPLATE (verify against the docs): expose Baserow as MCP tools by importing its OpenAPI
+# specification, so agents can read and write Baserow rows through the gateway with no
+# custom code.
+#
+# This is marked a template because the exact OpenAPI-to-MCP schema fields in agentgateway
+# are the least stable part of the configuration. Confirm the current field names against
+# https://agentgateway.dev/docs and the schema at https://agentgateway.dev/schema/config
+# before deploying. The structure below shows the intent; adjust keys to match the schema.
+#
+# Baserow auth is an API token; keep it in the environment and reference it as $VAR.
+
+binds:
+  - port: 3000
+    listeners:
+      - routes:
+          - backends:
+              - mcp:
+                  targets:
+                    - name: baserow
+                      # The OpenAPI-to-MCP target imports a REST API described by an
+                      # OpenAPI spec and presents its operations as MCP tools. Confirm the
+                      # exact sub-keys (schema location, host, auth) in the current schema.
+                      openapi:
+                        # Point at Baserow's OpenAPI spec (per-database docs are available
+                        # from the Baserow app).
+                        schemaUrl: "https://baserow.example.com/api/redoc/"  # confirm the real spec URL
+                        host: "baserow.example.com"
+                        auth:
+                          # Baserow expects: Authorization: Token <token>
+                          header: "Authorization"
+                          value: "Token $BASEROW_API_TOKEN"
+
+# Tip: a large OpenAPI surface becomes a large, noisy tool catalogue. Scope the spec or
+# filter operations so agents see only the endpoints you intend to expose.

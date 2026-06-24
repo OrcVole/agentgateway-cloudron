@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Example: expose the Qdrant Cloudron app as MCP tools, so agents can do vector search
+# through the gateway.
+#
+# This runs the official mcp-server-qdrant as a stdio MCP backend using uvx, which this
+# package bundles. The server connects to your Qdrant Cloudron app over its public domain.
+#
+# VERIFY before relying on this: confirm the current package name and environment variable
+# names for mcp-server-qdrant against its README, because that project's options change.
+# The QDRANT_API_KEY is injected from the environment, not written into this file.
+
+binds:
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              cors:
+                # Allow browser-based MCP clients (the Inspector, web frontends) to connect.
+                allowOrigins:
+                  - "*"
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - cache-control
+                exposeHeaders:
+                  - "Mcp-Session-Id"
+            backends:
+              - mcp:
+                  targets:
+                    - name: qdrant
+                      stdio:
+                        cmd: uvx
+                        args: ["mcp-server-qdrant"]
+                        env:
+                          QDRANT_URL: "https://qdrant.example.com"  # the Qdrant Cloudron app domain
+                          QDRANT_API_KEY: "$QDRANT_API_KEY"        # injected from the environment
+                          COLLECTION_NAME: "knowledge"
+
+# Test once running, from a client machine:
+#   npx @modelcontextprotocol/inspector
+#   then connect to https://<data-plane>/mcp (or /sse) and list and call the Qdrant tools.
+#
+# If the backend never starts: confirm uvx is on PATH in the container and the Qdrant
+# domain is reachable from the gateway.
