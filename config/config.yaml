@@ -1,0 +1,61 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Default agentgateway configuration for Cloudron.
+#
+# This file is SEEDED into /app/data/config.yaml on first run and is the live, editable
+# config thereafter (the admin UI rewrites it on save). On every boot, start.sh re-asserts
+# config.adminAddr so the admin UI stays reachable, and on first run it generates the
+# data-plane API key and writes it into the apiKey policy below.
+#
+# Two surfaces:
+#   - Admin UI on the PRIMARY Cloudron domain, behind Cloudron login (the proxyAuth addon).
+#   - Data plane on the gw-api subdomain, open to programmatic clients and secured by the API
+#     key. Clients authenticate with:  Authorization: Bearer <key>
+#     The generated key is stored at /app/data/.api_key (also shown after install).
+#
+# IMPORTANT: agentgateway interpolates environment references (a leading dollar sign followed
+# by a NAME) from this file, including inside comments. A reference to a variable that is not
+# set will stop the gateway from starting. So do not paste an environment reference here for a
+# variable you have not set in the app environment. To add LLM or other backends that need
+# such references, copy a working block from config/examples/ and set the variable first.
+
+config:
+  # Bound to all interfaces so the Cloudron reverse proxy can reach the UI on the httpPort.
+  # The genuine agentgateway default binds localhost only, which would make the app
+  # unreachable, so start.sh re-asserts this value on every boot.
+  adminAddr: "0.0.0.0:15000"
+
+# --- Data plane: one listener on container port 3000 -------------------------------------
+binds:
+  - port: 3000
+    listeners:
+        # A single API key guards EVERY route on this listener. start.sh writes the generated
+        # key here on first run. Rotate it in the admin UI, or by editing this file and
+        # restarting. Add more keys under keys[] to issue separate credentials.
+      - policies:
+          apiKey:
+            mode: strict
+            keys:
+              - key: "SEEDED_ON_FIRST_RUN"
+        routes:
+          # MCP: the reference "everything" server, reachable at /mcp. This is a removable
+          # demo so the gateway works the moment it is installed. Connect an MCP client to
+          # https://<gw-api-domain>/mcp with the Bearer key. Replace or extend targets[] with
+          # your own MCP servers (uvx, npx, or remote http). See config/examples/.
+          - name: mcp
+            matches:
+              - path:
+                  pathPrefix: /mcp
+            backends:
+              - mcp:
+                  targets:
+                    - name: everything
+                      stdio:
+                        cmd: npx
+                        args: ["@modelcontextprotocol/server-everything"]
+
+          # To add an OpenAI-compatible LLM endpoint at /v1, add a route here with an `ai`
+          # backend and a `backendAuth` policy. Because of the interpolation note above, set
+          # the provider key in the app environment first, then copy the block from
+          # config/examples/ (for example the Ollama recipe) and adapt it. The README walks
+          # through it step by step.

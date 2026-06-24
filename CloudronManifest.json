@@ -1,0 +1,43 @@
+{
+  "id": "dev.agentgateway.cloudronapp",
+  "title": "Agentgateway",
+  "author": "OrcVole",
+  "tagline": "Open source proxy for MCP and LLM traffic",
+  "icon": "file://logo.png",
+  "description": "file://DESCRIPTION.md",
+  "changelog": "file://CHANGELOG.md",
+  "version": "1.0.0",
+  "upstreamVersion": "1.3.1",
+  "healthCheckPath": "/ui/",
+  "httpPort": 15000,
+  "httpPorts": {
+    "DATA_PLANE_DOMAIN": {
+      "title": "Data plane (MCP and LLM API)",
+      "description": "Programmatic endpoint for MCP and LLM clients. This domain is not behind Cloudron login; it is secured by the agentgateway API key.",
+      "containerPort": 3000,
+      "defaultValue": "gw-api"
+    }
+  },
+  "addons": {
+    "localstorage": {},
+    "proxyAuth": {}
+  },
+  "memoryLimit": 1073741824,
+  "configurePath": "/ui/",
+  "tags": [
+    "chat"
+  ],
+  "website": "https://github.com/OrcVole/agentgateway-cloudron",
+  "documentationUrl": "https://github.com/OrcVole/agentgateway-cloudron",
+  "postInstallMessage": "file://POSTINSTALL.md",
+  "manifestVersion": 2,
+  "contactEmail": "OrcVole@users.noreply.github.com",
+  "iconUrl": "https://raw.githubusercontent.com/OrcVole/agentgateway-cloudron/main/logo.png",
+  "packagerName": "OrcVole",
+  "packagerUrl": "https://github.com/OrcVole/agentgateway-cloudron",
+  "minBoxVersion": "9.1.0",
+  "mediaLinks": [
+    "https://raw.githubusercontent.com/OrcVole/agentgateway-cloudron/main/screenshots/admin-overview.png"
+  ],
+  "dockerImage": "ghcr.io/orcvole/agentgateway-cloudron@sha256:47bfe69501c472bf20af17c29ce27bd1297fb352baa67a9ba21373168412fbba"
+}

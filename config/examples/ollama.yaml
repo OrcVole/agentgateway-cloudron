@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Route an OpenAI-compatible LLM endpoint at /v1 to a Cloudron Ollama app, on this package's
+# data-plane listener.
+#
+# Add the `llm` route below to binds[0].listeners[0].routes in /app/data/config.yaml (the default
+# config already provides the bind, the listener, and the API key, so you only add the route), or
+# add it through the admin UI, then restart. Clients then send:
+#   POST https://<data-plane>/v1/chat/completions   with the data-plane API key as a bearer token.
+#
+# Confirmed against agentgateway v1.3 on Cloudron:
+#   - Do NOT use the top-level `llm:` section for this. It serves on its own port, not on the
+#     data-plane listener. Use an `ai` backend on a /v1 route, as below.
+#   - hostOverride points the openAI provider at a custom host and must be "host:port" (no scheme,
+#     no path). The provider adds the /v1/chat/completions path.
+#   - backendTLS makes the upstream call HTTPS. Cloudron-fronted apps listen on :443, so without it
+#     the call is plain HTTP to an HTTPS port and the upstream returns 400.
+#   - provider.openAI.model is the model sent upstream and overrides the model in the request.
+#
+# Auth: a Cloudron Ollama app requires its own token. Set OLLAMA_API_KEY in this app's Environment
+# (the dashboard) to that token; the reference below resolves from the environment, so no secret is
+# written into this file. If your Ollama has no token, omit the backendAuth policy entirely (do not
+# invent a placeholder key). Note: agentgateway refuses to start if a referenced variable is unset.
+#
+# Performance: a large model on a CPU-only box can take longer than the reverse proxy's read window
+# to cold-load on the first request. Keep the model warm (set OLLAMA_KEEP_ALIVE on the Ollama app)
+# and prefer streaming clients; streamed tokens keep the connection alive. Streaming does not help
+# the very first cold load.
+
+- name: llm
+  matches:
+    - path:
+        pathPrefix: /v1
+  policies:
+    backendAuth:
+      key: "$OLLAMA_API_KEY"          # the Ollama app token, set in this app's Environment
+    backendTLS: {}                    # upstream is HTTPS
+  backends:
+    - ai:
+        name: ollama
+        provider:
+          openAI:
+            model: "gemma3:4b"        # set to a model you have pulled; pin the tag, never :latest
+        hostOverride: "ollama.example.com:443"

@@ -1,0 +1,81 @@
+# yaml-language-server: $schema=https://agentgateway.dev/schema/config
+#
+# Example: expose the RustFS Cloudron app (S3-compatible object storage) as MCP tools.
+#
+# Default server: the Apache OpenDAL MCP server, run via uvx (uv is already bundled in this
+# package, so there is no extra image tooling). OpenDAL is an Apache Software Foundation
+# project, is multi-backend, and takes a custom S3 endpoint cleanly, which suits RustFS.
+#
+# Scope note: the OpenDAL MCP server is oriented to list, read, and metadata operations,
+# which is ideal for retrieval and browsing. If your agents must also WRITE or DELETE
+# objects or generate presigned URLs, use txn2/mcp-s3 instead (see the alternative block at
+# the bottom of this file).
+#
+# RustFS caveat: RustFS is young. Pin its version, test the exact S3 operations you rely on,
+# and do not assume full S3 API parity. Keep access keys in the environment, not in this file.
+#
+# VERIFY before relying on this: confirm the current OPENDAL_* variable names and the package
+# name against the mcp-server-opendal README, because option names can change.
+
+binds:
+  - port: 3000
+    listeners:
+      - routes:
+          - policies:
+              cors:
+                allowOrigins:
+                  - "*"
+                allowHeaders:
+                  - mcp-protocol-version
+                  - content-type
+                  - cache-control
+                exposeHeaders:
+                  - "Mcp-Session-Id"
+            backends:
+              - mcp:
+                  targets:
+                    - name: rustfs
+                      stdio:
+                        cmd: uvx
+                        args: ["mcp-server-opendal"]
+                        env:
+                          # "rustfs" here is the OpenDAL alias; objects are addressed as
+                          # rustfs://bucket/path once configured.
+                          OPENDAL_RUSTFS_TYPE: "s3"
+                          OPENDAL_RUSTFS_BUCKET: "castle"            # your RustFS bucket
+                          OPENDAL_RUSTFS_REGION: "auto"              # MinIO-style services ignore region
+                          OPENDAL_RUSTFS_ENDPOINT: "https://rustfs.example.com"  # the RustFS Cloudron app domain
+                          OPENDAL_RUSTFS_ACCESS_KEY_ID: "$RUSTFS_ACCESS_KEY_ID"
+                          OPENDAL_RUSTFS_SECRET_ACCESS_KEY: "$RUSTFS_SECRET_ACCESS_KEY"
+
+# Secrets handling: the $RUSTFS_* values are resolved from the gateway's environment, so the
+# real keys never live in this file (which the admin UI may rewrite). If your build of
+# agentgateway does not interpolate $VAR inside a stdio env map, set these variables in the
+# container environment instead; the child process inherits them.
+#
+# Test once running, from a client machine:
+#   npx @modelcontextprotocol/inspector
+#   connect to https://<data-plane>/mcp (or /sse), then list and read objects under
+#   rustfs://castle/...
+#
+# ----------------------------------------------------------------------------------------
+# ALTERNATIVE (read-write): txn2/mcp-s3
+#
+# Use this when agents must write or delete objects, or generate presigned URLs. It is a Go
+# binary, so the package must build or fetch it (it is not run via uvx). It is designed
+# S3-compatibility-first: set S3_ENDPOINT and S3_USE_PATH_STYLE for RustFS, and consider the
+# read-only and size-limit guards for safety.
+#
+#             backends:
+#               - mcp:
+#                   targets:
+#                     - name: rustfs
+#                       stdio:
+#                         cmd: mcp-s3            # the built binary, on PATH in the image
+#                         env:
+#                           S3_ENDPOINT: "https://rustfs.example.com"
+#                           S3_USE_PATH_STYLE: "true"
+#                           AWS_REGION: "us-east-1"
+#                           AWS_ACCESS_KEY_ID: "$RUSTFS_ACCESS_KEY_ID"
+#                           AWS_SECRET_ACCESS_KEY: "$RUSTFS_SECRET_ACCESS_KEY"
+#                           # Optional safety: run read-only until write access is needed.

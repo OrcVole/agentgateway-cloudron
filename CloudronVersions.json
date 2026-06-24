@@ -1,0 +1,53 @@
+{
+    "stable": true,
+    "versions": {
+        "1.0.0": {
+            "manifest": {
+                "id": "dev.agentgateway.cloudronapp",
+                "title": "Agentgateway",
+                "author": "OrcVole",
+                "tagline": "Open source proxy for MCP and LLM traffic",
+                "icon": "file://logo.png",
+                "description": "agentgateway is an open source proxy for AI traffic. It sits in front of your model providers\nand tool servers and gives agents a single, governed entry point.\n\nThis package runs agentgateway on Cloudron with a clean, secure topology:\n\n- The admin interface and UI run on the app's primary domain, behind Cloudron login, so only\n  your Cloudron users can configure the gateway.\n- The data plane (the Model Context Protocol endpoint and the OpenAI-compatible LLM endpoint)\n  runs on a separate subdomain that programmatic clients reach directly, protected by an API\n  key that is generated for you on first install.\n\nUse it to:\n\n- Expose MCP tool servers (stdio, SSE, streamable HTTP, or remote) to your agents through one\n  endpoint, with authentication and access policies.\n- Put an OpenAI-compatible front door in front of one or more LLM providers, with key\n  management, failover, and cost visibility.\n\nagentgateway is an Apache-2.0 licensed Linux Foundation project. This package tracks its stable\nreleases and keeps the upstream binary unmodified.\n\nIssues and questions about this package go to its public issue tracker.\n",
+                "changelog": "- Initial release. Packages agentgateway v1.3.1 on cloudron/base:5.0.0.\n- Admin UI on the primary domain, behind the Cloudron proxyAuth addon.\n- Data plane (MCP and the OpenAI-compatible LLM endpoint) on a dedicated httpPorts subdomain,\n  secured by an API key generated on first install.\n- Bundles uv for uvx-based MCP servers; Node is provided by the base image.\n- Ships a removable MCP \"everything\" demo server at `/mcp` so the gateway works immediately.\n",
+                "version": "1.0.0",
+                "upstreamVersion": "1.3.1",
+                "healthCheckPath": "/ui/",
+                "httpPort": 15000,
+                "httpPorts": {
+                    "DATA_PLANE_DOMAIN": {
+                        "title": "Data plane (MCP and LLM API)",
+                        "description": "Programmatic endpoint for MCP and LLM clients. This domain is not behind Cloudron login; it is secured by the agentgateway API key.",
+                        "containerPort": 3000,
+                        "defaultValue": "gw-api"
+                    }
+                },
+                "addons": {
+                    "localstorage": {},
+                    "proxyAuth": {}
+                },
+                "memoryLimit": 1073741824,
+                "configurePath": "/ui/",
+                "tags": [
+                    "chat"
+                ],
+                "website": "https://github.com/OrcVole/agentgateway-cloudron",
+                "documentationUrl": "https://github.com/OrcVole/agentgateway-cloudron",
+                "postInstallMessage": "# agentgateway is installed\n\n## Admin UI\n\nOpen $CLOUDRON-APP-ORIGIN and sign in with your Cloudron account. The admin UI is on the primary\ndomain and is protected by Cloudron login, so only your Cloudron users can reach it.\n\n## Data plane (MCP and LLM)\n\nThe programmatic endpoint is on the separate domain you assigned to the \"Data plane\" port during\ninstall (the suggested name was `gw-api`). You can see or change it under this app's Location\nsettings. It is intentionally not behind Cloudron login, because automated agents and LLM clients\ncannot complete an interactive sign-in. It is protected by an API key instead.\n\nA demo MCP server (the reference \"everything\" server) is already wired up at `/mcp`, so you can\ntest right away.\n\n## Your API key\n\nA data-plane API key was generated on first start. The simplest way to see it is in the admin UI\n(above): open the data-plane listener and look at its API key policy. The same value is also\nwritten to the app's storage, so from a terminal you can run `cloudron exec` for this app and\n`cat /app/data/.api_key` (it is also present in `/app/data/config.yaml`).\n\nClients send it as a bearer token, for example:\n\n    curl https://<your-data-plane-domain>/mcp -H \"Authorization: Bearer <the-key>\"\n\n## Next steps\n\n- Add LLM and MCP backends in the admin UI, or by editing `/app/data/config.yaml`.\n- To enable the OpenAI-compatible `/v1` endpoint, set the provider key in this app's Environment,\n  then add the route (see the README and the `config/examples/` files).\n- Rotate or add API keys in the admin UI.\n\nUntil you configure an LLM, the admin panel shows \"LLM config is not initialized\". That is expected\nand harmless: the gateway is healthy and MCP works. The OpenAI-compatible `/v1` endpoint is a\ndata-plane route you add separately (see `config/examples/ollama.yaml`); it works on its own,\nindependent of that panel message.\n\nThe README covers the full topology, the exact client URLs, and the security model. Report issues at the project's public issue tracker.\n",
+                "manifestVersion": 2,
+                "contactEmail": "OrcVole@users.noreply.github.com",
+                "iconUrl": "https://raw.githubusercontent.com/OrcVole/agentgateway-cloudron/main/logo.png",
+                "packagerName": "OrcVole",
+                "packagerUrl": "https://github.com/OrcVole/agentgateway-cloudron",
+                "minBoxVersion": "9.1.0",
+                "mediaLinks": [
+                    "https://raw.githubusercontent.com/OrcVole/agentgateway-cloudron/main/screenshots/admin-overview.png"
+                ],
+                "dockerImage": "ghcr.io/orcvole/agentgateway-cloudron@sha256:47bfe69501c472bf20af17c29ce27bd1297fb352baa67a9ba21373168412fbba"
+            },
+            "creationDate": "Wed, 24 Jun 2026 18:48:46 GMT",
+            "ts": "Wed, 24 Jun 2026 18:48:46 GMT",
+            "publishState": "published"
+        }
+    }
+}
