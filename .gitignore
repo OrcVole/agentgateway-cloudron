@@ -10,3 +10,7 @@ docs/forum-announcement.md
 orcvole-token.txt
 *-token.txt
 agentgateway.webp
+.anonymize-list
+*token*.txt
+.env.*
+phase-notes/
