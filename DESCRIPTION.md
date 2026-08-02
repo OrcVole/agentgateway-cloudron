@@ -1,3 +1,5 @@
+<upstream>1.4.1</upstream>
+
 agentgateway is an open source proxy for AI traffic. It sits in front of your model providers
 and tool servers and gives agents a single, governed entry point.
 
