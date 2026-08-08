@@ -4,8 +4,13 @@
 # the real gate scripts. Treat the step bodies as informed proposals rather than tested fact, and
 # expect the first real run to correct something here.
 #
-# THE RUNNER IT TARGETS (registered 2026-08-08, id 1, `arctic-workstation`, status idle)
-# Registered at USER level on forgejo.wanderingmonster.dev, so it serves all 18 package repos
+# NOTE THIS FILE IS PUBLISHABLE and is scanned by test/secret-scan.sh like everything else. An
+# earlier draft named the forge host and the runner machine in these comments and was caught by the
+# scan for exactly that. Describe the topology in general terms here; the specifics live in the
+# estate's own notes, which are not published.
+#
+# THE RUNNER IT TARGETS (registered 2026-08-08)
+# Registered at USER level on the main forge, so one runner serves every package repo
 # without per-repo registration. Its label is `workstation`, declared as `workstation:host`, which
 # means steps run DIRECTLY on the workstation rather than inside a job container. That is the
 # deliberate choice: these gates build and run container images themselves, so a containerised job
@@ -59,6 +64,28 @@ jobs:
       - name: build the image the gates inspect
         run: podman build -t "$IMAGE" .
 
+      # secret-scan's box, identity and session patterns live in `.anonymize-list`, which is
+      # GITIGNORED by design (so the published script never carries the strings it hunts for) and is
+      # therefore ABSENT FROM EVERY CI CHECKOUT. Without it the scan still runs, but only against
+      # generic credential shapes — it quietly becomes a much weaker gate that still reports green.
+      #
+      # Measured on this workflow's own first run, 2026-08-08: an earlier draft of this file named
+      # the forge host in a comment. CI passed it. The same scan run locally, where the denylist
+      # exists, FAILED it. That is the exact shape of a check that proves less than it looks.
+      #
+      # So: rebuild the denylist from a repo secret, and REFUSE to continue without one. A gate that
+      # cannot make its strongest claim must say so rather than pass.
+      - name: restore the anonymity denylist
+        run: |
+          if [ -z "${{ secrets.ANONYMIZE_LIST }}" ]; then
+            echo "ANONYMIZE_LIST is not set. secret-scan would run without its box/identity"
+            echo "patterns and report a green check that proves far less than it appears to."
+            echo "Set the secret (contents of .anonymize-list) before relying on this gate."
+            exit 1
+          fi
+          printf '%s\n' "${{ secrets.ANONYMIZE_LIST }}" > .anonymize-list
+          echo "denylist restored: $(grep -cvE '^\s*(#|$)' .anonymize-list) patterns"
+
       # First, because a leaked secret is the one failure that cannot be undone after a push.
       - name: secret-scan
         run: test/secret-scan.sh "$IMAGE"
@@ -72,8 +99,12 @@ jobs:
             echo "no test/smoke.sh in this package — skipping (this is expected for 4 of 18)"
           fi
 
-      # Host mode leaves images on a shared machine, so clean up rather than accumulating one image
-      # per PR on the workstation's disk. `|| true`: a failed cleanup must not fail a passing gate.
-      - name: remove the built image
+      # Host mode leaves both the image AND the workspace on a shared machine — this is not a
+      # container that vanishes. So remove the image rather than accumulating one per PR, and delete
+      # the restored denylist rather than leaving the estate's identity strings sitting in a
+      # checkout. `|| true`: a failed cleanup must never fail a passing gate.
+      - name: clean up
         if: always()
-        run: podman rmi -f "$IMAGE" || true
+        run: |
+          rm -f .anonymize-list || true
+          podman rmi -f "$IMAGE" || true
