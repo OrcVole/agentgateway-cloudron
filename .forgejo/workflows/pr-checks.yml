@@ -75,15 +75,28 @@ jobs:
       #
       # So: rebuild the denylist from a repo secret, and REFUSE to continue without one. A gate that
       # cannot make its strongest claim must say so rather than pass.
+      # Required only where the scanner actually reads the file. Two generations of secret-scan.sh
+      # exist across the estate: most read `.anonymize-list`, but langfuse, prosody and windmill
+      # carry their patterns INLINE and need no secret. Demanding one there would be a gate that can
+      # never pass, for nothing — so ask the script what it needs rather than assuming.
+      #
+      # The value arrives via `env:`, not by interpolating into the shell: denylists are multi-line
+      # and a bare `${{ }}` inside a test expression breaks the moment one contains a quote.
       - name: restore the anonymity denylist
+        env:
+          ANONYMIZE_LIST: ${{ secrets.ANONYMIZE_LIST }}
         run: |
-          if [ -z "${{ secrets.ANONYMIZE_LIST }}" ]; then
-            echo "ANONYMIZE_LIST is not set. secret-scan would run without its box/identity"
-            echo "patterns and report a green check that proves far less than it appears to."
-            echo "Set the secret (contents of .anonymize-list) before relying on this gate."
+          if ! grep -q 'anonymize-list' test/secret-scan.sh; then
+            echo "this package's scanner carries its patterns inline; no denylist needed"
+            exit 0
+          fi
+          if [ -z "$ANONYMIZE_LIST" ]; then
+            echo "ANONYMIZE_LIST is not set, and this package's scanner reads it. The scan would run"
+            echo "without its box/identity patterns and report a green check that proves far less"
+            echo "than it appears to. Set the secret (contents of .anonymize-list) for this repo."
             exit 1
           fi
-          printf '%s\n' "${{ secrets.ANONYMIZE_LIST }}" > .anonymize-list
+          printf '%s\n' "$ANONYMIZE_LIST" > .anonymize-list
           echo "denylist restored: $(grep -cvE '^\s*(#|$)' .anonymize-list) patterns"
 
       # First, because a leaked secret is the one failure that cannot be undone after a push.
