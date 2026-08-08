@@ -1,0 +1,79 @@
+# .forgejo/workflows/pr-checks.yml — the merge button becomes the gate.
+#
+# DRAFT: the runner now exists, but this file has still NEVER EXECUTED. Written 2026-08-08 against
+# the real gate scripts. Treat the step bodies as informed proposals rather than tested fact, and
+# expect the first real run to correct something here.
+#
+# THE RUNNER IT TARGETS (registered 2026-08-08, id 1, `arctic-workstation`, status idle)
+# Registered at USER level on forgejo.wanderingmonster.dev, so it serves all 18 package repos
+# without per-repo registration. Its label is `workstation`, declared as `workstation:host`, which
+# means steps run DIRECTLY on the workstation rather than inside a job container. That is the
+# deliberate choice: these gates build and run container images themselves, so a containerised job
+# would be docker-in-docker for no benefit.
+#
+# Consequences of host mode, all of which have bitten someone before:
+#   * There is NO docker daemon on the workstation. Rootless podman is the engine, and the unit sets
+#     DOCKER_HOST to its socket so a script asking for docker still finds one.
+#   * The job inherits the runner unit's PATH, nothing more. node is on it (JS actions need it) but
+#     it is an nvm path carrying a version number — see the unit's own comment.
+#   * The workspace is a real directory on a real machine, not a fresh container. Steps must not
+#     assume a clean filesystem beyond their own checkout.
+#
+# THE EXPERIMENT THIS SERVES ("Update-as-PR", doctrine/cloudron-packaging-experiments.md)
+# A detected upstream release arrives as a pull request — pin, manifest (including dockerImage) and
+# a draft feed entry — and the two gates that can run without the rig run as checks on it. The human
+# gate stops being "remember to run the scripts" and becomes the merge button, which is the one
+# control that cannot be forgotten.
+#
+# WHY THESE TWO GATES AND NOT THE OTHERS
+#   test/secret-scan.sh  present in all 18 packages. Scans the publishable file set AND the built
+#                        image, so it needs the image built first. This is the gate whose failure is
+#                        unrecoverable after the fact — once pushed, it is public — so it runs first.
+#   test/smoke.sh        present in 14 of 18. Explicitly "no box required": it runs the image the way
+#                        Cloudron does and asserts the package contract. Skipped where absent rather
+#                        than failing, because four packages legitimately have no smoke gate.
+# Everything else (backup-restore, upgrade, gate2, sso-topology) needs a live Cloudron and belongs on
+# the Proving Ground via bench-package.sh, not in CI. Do not be tempted to add them here.
+
+name: PR checks
+on:
+  pull_request:
+    branches: [main]
+
+env:
+  # The tag the gates build and inspect. Kept in one place: both scripts take an image argument and
+  # they must be handed the SAME one, or secret-scan proves a different artefact than smoke tested.
+  IMAGE: ci-pr-${{ github.event.pull_request.number }}
+
+jobs:
+  gates:
+    # Matches the `workstation` label declared by runner id 1. A label with no runner queues forever
+    # and reports nothing, which looks like a guarded PR and is not one.
+    runs-on: workstation
+    steps:
+      - uses: actions/checkout@v4
+
+      # podman, not docker: there is no docker daemon here. The gate scripts already default to
+      # podman (they document ENGINE=docker as the override), so this matches them rather than
+      # fighting them.
+      - name: build the image the gates inspect
+        run: podman build -t "$IMAGE" .
+
+      # First, because a leaked secret is the one failure that cannot be undone after a push.
+      - name: secret-scan
+        run: test/secret-scan.sh "$IMAGE"
+
+      # Skipped, not failed, where a package has no smoke gate: 4 of 18 legitimately do not.
+      - name: smoke
+        run: |
+          if [ -x test/smoke.sh ]; then
+            test/smoke.sh "$IMAGE"
+          else
+            echo "no test/smoke.sh in this package — skipping (this is expected for 4 of 18)"
+          fi
+
+      # Host mode leaves images on a shared machine, so clean up rather than accumulating one image
+      # per PR on the workstation's disk. `|| true`: a failed cleanup must not fail a passing gate.
+      - name: remove the built image
+        if: always()
+        run: podman rmi -f "$IMAGE" || true
