@@ -20,6 +20,7 @@ client. It redirects unauthenticated requests to a login page, which a non-brows
 satisfy, so every call breaks with a redirect instead of a clean 401.
 
 Two facts that bite:
+
 - `proxyAuth` cannot be added after the first install. Declare it in the manifest from the start.
 - The addon key is camelCase `proxyAuth`. The packaging reference has shown it lowercase, which
   fails manifest validation.

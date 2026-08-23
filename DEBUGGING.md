@@ -78,16 +78,20 @@ A change is not done until this passes on the target Cloudron.
 3. **MCP.** Add the example "everything" server as a backend (it runs via `npx
    @modelcontextprotocol/server-everything`). From a client machine, connect MCP Inspector
    to the data-plane MCP endpoint and list and call a tool:
+
    ```bash
    npx @modelcontextprotocol/inspector
    # connect to the data-plane URL, path /mcp or /sse
    ```
+
 4. **LLM.** Configure a provider with a key, then call the OpenAI-compatible endpoint:
+
    ```bash
    curl -s <data-plane-url>/v1/chat/completions \
      -H "Content-Type: application/json" \
      -d '{"model":"<configured-model>","messages":[{"role":"user","content":"Say hello in one sentence."}]}' | jq .
    ```
+
    On v1.3 you should then see token and dollar cost for that call in the UI.
 5. **Persistence.** Change something in the UI, restart the app, and confirm the change
    survived. This proves the `/app/data` wiring.
@@ -119,6 +123,7 @@ Turn debug mode off once fixed: `cloudron configure --no-debug`.
 Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
 
 ### Install fails: "Invalid CloudronManifest.json: must NOT have additional properties @ /addons"
+
 - **Symptom:** `cloudron install` rejects the manifest at validation, before any build, pointing at `/addons`.
 - **Cause:** an addon key is not in the box's allowed set. The proxy-authentication addon key is
   camelCase **`proxyAuth`**, not `proxyauth`. The Cloudron packaging skill's addon reference lists
@@ -126,6 +131,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
 - **Fix:** `"addons": { "localstorage": {}, "proxyAuth": {} }`.
 
 ### First MCP call is slow or times out, later calls are fast
+
 - **Symptom:** the first request to a stdio MCP backend (for example the everything server via
   `npx`) takes many seconds or times out; subsequent calls are quick.
 - **Cause:** `npx`/`uvx` fetches the server package on first launch, and agentgateway starts stdio
@@ -135,6 +141,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   `/app/data/.npm` (or `/app/data/.uv`) and persists across restarts.
 
 ### LLM /v1/models returns an error; a chat UI's model dropdown will not populate
+
 - **Symptom:** `GET https://<data-plane>/v1/models` returns 503 ("failed to parse request: EOF
   while parsing a value"), and a client like OpenWebUI cannot auto-list models.
 - **Cause:** the data-plane `ai` route serves chat completions (`POST /v1/chat/completions`), not
@@ -143,6 +150,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   connection. Chat works normally. The gateway pins the model server-side anyway.
 
 ### LLM request cuts off at about 60 seconds on a slow cold model load
+
 - **Symptom:** the first request to a large model on a CPU-only box fails with the client seeing
   "unexpected eof"; agentgateway logs a 60-second request with no HTTP status.
 - **Cause:** Cloudron's reverse-proxy read window severs the connection while agentgateway is still
@@ -155,6 +163,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   connection alive for long responses). Streaming does not help the very first cold load.
 
 ### App fails to start: "environment variable not found"
+
 - **Symptom:** logs show `error looking key 'X' up: environment variable not found`, or start.sh
   exits with a FATAL message about an unset environment variable.
 - **Cause:** agentgateway interpolates environment references (a leading dollar sign plus a NAME)
@@ -166,6 +175,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   because migrate cannot supply the value and would strip your comments.
 
 ### App is marked unhealthy on first start
+
 - **Symptom:** Cloudron reports the app unhealthy shortly after install.
 - **Likely causes:** `healthCheckPath` does not return 2xx; the admin interface is bound to
   localhost only, so Cloudron cannot reach it; or the binary failed to start (missing shared
@@ -176,6 +186,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   library. Look for the last `==>` marker in the logs.
 
 ### Admin UI loads but the data plane is unreachable from clients
+
 - **Symptom:** the UI works on the domain, but agents cannot reach `/mcp` or
   `/v1/chat/completions`.
 - **Likely cause:** the data-plane listener is not exposed. With the default topology the
@@ -184,6 +195,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   the client URL. Do not place the OAuth proxy in front of the data plane.
 
 ### Config changes are lost on restart or update
+
 - **Symptom:** edits made in the UI disappear after a restart.
 - **Likely cause:** the config file is being read from `/app/code` (read-only) or reseeded
   on every start instead of only when absent.
@@ -191,6 +203,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   seeding copies the default only if the file does not already exist.
 
 ### stdio MCP backend fails to launch
+
 - **Symptom:** an MCP backend configured with `npx` or `uvx` does not start.
 - **Likely cause:** Node.js or `uv` is not present in the image, or the command is not on
   `PATH` for the `cloudron` user.
@@ -199,6 +212,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
   backends are supported.
 
 ### A write fails with a read-only filesystem error
+
 - **Symptom:** a startup error mentions a read-only file system.
 - **Likely cause:** the app is writing outside `/tmp`, `/run`, or `/app/data`.
 - **Fix:** redirect that path into `/app/data` (persisted) or `/tmp` (ephemeral). Find the
@@ -209,7 +223,7 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
 ## When you are stuck
 
 - Re-read AGENTS.md sections 5 and 6. Most failures are a conformance or topology mistake.
-- Check the upstream docs for the pinned version at https://agentgateway.dev/docs/standalone/
-  and the config schema at https://agentgateway.dev/schema/config.
+- Check the upstream docs for the pinned version at <https://agentgateway.dev/docs/standalone/>
+  and the config schema at <https://agentgateway.dev/schema/config>.
 - Reproduce locally first with `docker run` and the same config before blaming Cloudron.
 - Record whatever you learn here so the next agent does not start from zero.

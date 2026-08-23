@@ -15,15 +15,19 @@ rules that this file assumes.
    Cloudron CLI (`npm install -g cloudron`), and access to the target Cloudron.
 2. **Install the Cloudron packaging skills** if you use an AI editor, so the assistant has
    the current conformance rules:
+
    ```bash
    npx skills add https://git.cloudron.io/docs/skills.git --skill cloudron-app-packaging
    npx skills add https://git.cloudron.io/docs/skills.git --skill cloudron-app-publishing
    ```
+
 3. **Build and install:**
+
    ```bash
    cloudron build
    cloudron install --location agentgateway.example.com
    ```
+
    Use `--debug` while iterating (see DEBUGGING.md).
 4. **Test:** run the smoke-test ladder in DEBUGGING.md ("Verifying a deploy"). A change is
    not done until it passes.
@@ -65,7 +69,7 @@ review:
    website, contactEmail, icon, tags.
 2. Maintain `CloudronVersions.json` as the version channel.
 3. Publish per the `cloudron-app-publishing` skill and the docs at
-   https://docs.cloudron.io/packaging/ .
+   <https://docs.cloudron.io/packaging/> .
 4. Announce in the Cloudron forum so others can test, and link the public repository.
 
 ---
@@ -97,4 +101,4 @@ to adopt.
 Open an issue in this repository with: what you did, what you expected, what happened, the
 relevant `cloudron logs` output (the `==>` lines in particular), and the package and
 upstream versions. If the problem is in agentgateway itself rather than the packaging,
-report it upstream at https://github.com/agentgateway/agentgateway and link it here.
+report it upstream at <https://github.com/agentgateway/agentgateway> and link it here.

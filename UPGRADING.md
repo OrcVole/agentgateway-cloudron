@@ -92,7 +92,7 @@ customizations, which is a package-wide defect.
 ## Standard bump steps
 
 1. Confirm the new stable tag exists on the upstream releases page
-   (https://github.com/agentgateway/agentgateway/releases) and that the image is published.
+   (<https://github.com/agentgateway/agentgateway/releases>) and that the image is published.
    Rely on the tag and the image, not on a blog post.
 2. Change the version in the two canonical places:
    - `Dockerfile`: `ARG AGENTGATEWAY_VERSION=v<new>`
@@ -119,5 +119,5 @@ customizations, which is a package-wide defect.
 - **Image base or binary path:** the multi-stage copy depends on the binary location
   (`/app/agentgateway`) in the official image. Re-verify on any major image change and re-run
   Gate 1.
-- **Config schema:** referenced at https://agentgateway.dev/schema/config. Validate the
+- **Config schema:** referenced at <https://agentgateway.dev/schema/config>. Validate the
   default `config/config.yaml` against the new version, and run Gate 2 on a real saved config.
