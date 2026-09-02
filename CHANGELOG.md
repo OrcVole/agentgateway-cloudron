@@ -1,3 +1,12 @@
+[1.0.2]
+
+- Update agentgateway 1.4.1 -> 1.5.0
+- Security: Go runtime updated to 1.26.5 to fix a CVE, JWT issuer and audience claims are now enforced, cross-namespace route delegation requires an explicit ReferenceGrant, sensitive request headers are redacted from trace and debug output, client-supplied moderation and routing headers are no longer trusted, JWKS targets are restricted, and Helm RBAC roles are scoped to the namespace
+- LLM token counts now include prompt-cache tokens; set AGENTGATEWAY_LEGACY_LLM_USAGE_TOKEN_SEMANTICS=true to restore previous behaviour
+- Backend and attached LLM policies now merge field by field instead of the backend policy fully replacing the attached policy; managed API key metadata now uses the agentgateway.dev/ prefix
+- Legacy Istio identity TLV support has been removed; native mTLS must be used for workload identity in sandwich topologies
+- Packaging: pin moved in Dockerfile ARG and the upstream FROM digest; no manifest, addon or start.sh change
+
 # Changelog
 
 All notable changes to this Cloudron package are recorded here. The package version is our own
