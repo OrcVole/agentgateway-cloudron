@@ -45,7 +45,7 @@ build on a newer toolchain can fail silently on the pinned `cloudron/base` image
 succeeds, and the binary only fails at runtime. Prove the new binary runs on the pinned base before
 pinning or pushing anything. The built image is the binary on the base, so test it directly:
 
-```
+```bash
 podman build --pull -t ghcr.io/orcvole/agentgateway-cloudron:<ver> -f Dockerfile .
 podman run --rm ghcr.io/orcvole/agentgateway-cloudron:<ver> ldd /app/code/agentgateway
 podman run --rm ghcr.io/orcvole/agentgateway-cloudron:<ver> /app/code/agentgateway --version
@@ -58,7 +58,7 @@ gate, and only then continue.
 
 ### 3. Push the image
 
-```
+```bash
 printf '%s' "$TOKEN" | podman login ghcr.io -u OrcVole --password-stdin
 podman push ghcr.io/orcvole/agentgateway-cloudron:<ver>
 ```
@@ -71,7 +71,7 @@ podman socket is an equivalent path and produced the same registry digest.
 Read the digest from the registry, not from the local image. A local podman build reports a
 different local manifest digest than the registry stores, so always read the tag from the registry:
 
-```
+```text
 skopeo inspect --format '{{.Digest}}' docker://ghcr.io/orcvole/agentgateway-cloudron:<ver>
 ```
 
@@ -113,7 +113,7 @@ future maintainer.
 Before pushing the repository, prove a stranger can pull the exact image. Remove the local copy, log
 out, and pull by digest with no credentials:
 
-```
+```bash
 podman rmi -f ghcr.io/orcvole/agentgateway-cloudron@sha256:<digest>
 podman logout ghcr.io
 printf '{"auths":{}}' > /tmp/empty.json
@@ -129,7 +129,7 @@ cannot pull.
 Stage the changes and commit as OrcVole, unsigned. The repository git config is already set to the
 OrcVole identity with `commit.gpgsign=false`, so a plain commit is correct:
 
-```
+```bash
 git add -A
 git commit -m "..."
 ```
@@ -143,7 +143,7 @@ host, email, username, registry, key, or token, and that the only new identifier
 Authenticate as OrcVole without writing a credential into git config or the process arguments, using
 `GIT_ASKPASS`:
 
-```
+```bash
 printf '%s' "$TOKEN" > /tmp/.ghtok; chmod 600 /tmp/.ghtok
 cat > /tmp/askpass.sh <<'EOF'
 #!/bin/sh

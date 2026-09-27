@@ -39,7 +39,7 @@ After install, with `<admin>` and `<data>` being the two domains you chose:
 
 Programmatic clients send the API key as a bearer token:
 
-```
+```bash
 curl https://<data>/v1/chat/completions \
   -H "Authorization: Bearer <api-key>" \
   -H "Content-Type: application/json" \
@@ -175,7 +175,7 @@ This package is published as a public image on GitHub Container Registry,
 `ghcr.io/orcvole/agentgateway-cloudron`, and as a Cloudron community versions file. To install it,
 point the Cloudron CLI at the versions URL and choose your two domains:
 
-```
+```bash
 cloudron install \
   --versions-url https://raw.githubusercontent.com/OrcVole/agentgateway-cloudron/main/CloudronVersions.json \
   --location agentgateway.example.com \
@@ -192,7 +192,7 @@ To build the image yourself instead of pulling the published one, clone this rep
 Cloudron build flow (it builds on the server, so no local Docker is needed), then install the
 result:
 
-```
+```bash
 cloudron build
 cloudron install --location agentgateway.example.com \
   --secondary-domains DATA_PLANE_DOMAIN=gw-api.example.com

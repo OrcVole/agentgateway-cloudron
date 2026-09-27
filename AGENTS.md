@@ -52,7 +52,7 @@ it as an official application.
 
 ## 3. Repository layout (expected)
 
-```
+```text
 .
 ├── AGENTS.md              # this file: the contract
 ├── CLAUDE.md             # pointer to AGENTS.md for Claude-based tools
