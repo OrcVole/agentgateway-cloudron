@@ -1,3 +1,24 @@
+[1.0.3]
+
+- Base image cloudron/base 5.0.0 to 6.0.0 (Ubuntu 26.04). Base 6 ships no Node, so the package now
+  brings its own: Node 24.19.0 with npm and npx (the runtime launches MCP servers with `npx`), at
+  /usr/local/node-24.19.0 and linked onto PATH. The base had supplied Node 22.14.0, so MCP servers
+  now run on Node 24.
+- Upstream agentgateway 1.5.0 to 1.6.0.
+- Security: JWT validation now enforces the `nbf` (not before) claim with 60 seconds of clock-skew
+  leeway; the standalone UI stores newly created API keys as hashes by default (keys already in your
+  config stay as they are); guardrails gain a `failureMode` and a provider guard failure on a
+  streamed response or realtime connection now rejects the content instead of letting it through
+  (set `failureMode: failOpen` to keep the old behaviour).
+- Behaviour changes to check in your config: a provider base URL with no path now uses `/` (add
+  `/v1` to such URLs); Anthropic Messages requests now prefer the OpenAI Responses format
+  (`AGENTGATEWAY_MESSAGES_PREFER_COMPLETIONS=true` restores the old choice until 1.7); a built-in
+  model catalogue now prices common public models, so USD budgets can begin to apply; standard LLM
+  paths in the top-level `llm:` section match exactly unless `llm.pathPrefix` is set.
+  `AGENTGATEWAY_LEGACY_LLM_USAGE_TOKEN_SEMANTICS` has been removed.
+- Docs: corrected the slow-request guidance. Cloudron does not cut proxied requests at 60 seconds;
+  the limit a user hits is their client's own timeout.
+
 [1.0.2]
 
 - Update agentgateway 1.4.1 -> 1.5.0

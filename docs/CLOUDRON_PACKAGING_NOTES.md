@@ -127,9 +127,10 @@ entry has the shape
 
 ## 9. Operational gotchas
 
-- The platform reverse proxy has a read timeout of about sixty seconds, with no per-app setting. A
-  slow first response (a cold model load, a long computation) gets cut. Mitigate with a keep-alive on
-  the backend and by preferring streaming, which keeps bytes flowing and resets the window.
+- There is no 60-second platform cut (corrected 2026-10-16; Cloudron's `proxy_read_timeout` is 3500
+  seconds). A slow first response (a cold model load, a long computation) is cut by the client's own
+  timeout. Raise it in the client, keep the backend warm, and prefer streaming, which keeps bytes
+  flowing.
 - A route that serves an endpoint and a top-level registry that a dashboard reads can be independent.
   A request can succeed through the route and be recorded in the logs while the dashboard, which
   reads the empty registry, shows nothing and warns that it is not initialized. Do not assume an

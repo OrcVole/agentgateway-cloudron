@@ -149,18 +149,19 @@ Add entries here as you encounter and fix them. Format: Symptom / Cause / Fix.
 - **Fix:** in the client, add the model name manually and disable the model-list fetch for this
   connection. Chat works normally. The gateway pins the model server-side anyway.
 
-### LLM request cuts off at about 60 seconds on a slow cold model load
+### A slow LLM request is cut off ("unexpected eof"), often on a cold model load
 
 - **Symptom:** the first request to a large model on a CPU-only box fails with the client seeing
-  "unexpected eof"; agentgateway logs a 60-second request with no HTTP status.
-- **Cause:** Cloudron's reverse-proxy read window severs the connection while agentgateway is still
-  waiting on the upstream model. agentgateway has no such timeout of its own (its own timeout would
-  log a 504), and Cloudron exposes no per-app proxy-timeout setting. An internal call to
-  `localhost:<data-plane-port>` (bypassing the proxy) completes fine, which confirms the proxy is
-  the limiter.
-- **Fix:** keep the model warm so calls finish inside the window (set `OLLAMA_KEEP_ALIVE` on the
-  Ollama app, for example `24h` or `-1`), and use streaming clients (streamed tokens keep the
-  connection alive for long responses). Streaming does not help the very first cold load.
+  "unexpected eof" or a timeout, while the model is still loading.
+- **Cause:** the limit is the **client's own timeout** (a chat front end, an SDK default or an
+  intermediate tool), not Cloudron. Cloudron's reverse proxy waits far longer (`proxy_read_timeout`
+  is 3500 seconds), so there is no 60-second platform cut. An earlier version of this page blamed
+  the platform proxy; that was wrong. agentgateway has no short timeout of its own either (its own
+  timeout would log a 504). Since 1.6.0 an optional response idle timeout can end a response when
+  the backend stops sending body data, so check the config if you set one.
+- **Fix:** raise the timeout in the client, or keep the model warm so calls finish quickly (set
+  `OLLAMA_KEEP_ALIVE` on the Ollama app, for example `24h` or `-1`). Streaming clients help
+  because tokens keep flowing, but streaming does not shorten a very first cold load.
 
 ### App fails to start: "environment variable not found"
 

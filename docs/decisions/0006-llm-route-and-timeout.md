@@ -18,16 +18,16 @@ a real constraint with slow models on a CPU-only box.
   `backendTLS` agentgateway sends plain HTTP to an HTTPS port and the upstream returns 400.
 - Put the upstream credential in a `backendAuth` policy as a `$VAR` reference, set in the app
   environment, never written into the file.
-- Accept and document the cold-load timeout: Cloudron's reverse proxy severs a request that exceeds
-  its read window (about 60 seconds), and there is no per-app setting to raise it. An internal call
-  that bypasses the proxy completes, which confirms the proxy is the limiter, not agentgateway.
+- Accept and document the cold-load timeout. CORRECTED 2026-10-16: the original reading blamed a
+  60-second Cloudron proxy cut. That cut does not exist (`proxy_read_timeout` is 3500 seconds); the
+  limit a user hits is their client's own timeout. Raise it there, or keep the model warm.
 
 ## Consequences
 
 - `config/examples/ollama.yaml` carries the proven shape, anonymized.
 - A large model on a CPU-only box can time out on its first, cold call until it is warm. The fix is
   to keep the model warm (`OLLAMA_KEEP_ALIVE` on the upstream) and to use streaming clients. This is
-  an upstream-and-proxy property, not a fault in this package, and it is documented in the README
+  a client-and-upstream property, not a fault in this package, and it is documented in the README
   and DEBUGGING.md.
 - The `/v1` route serves chat completions, not the model-list endpoint, so a client's automatic
   model fetch (`GET /v1/models`) does not work; clients add the model by hand. Also documented.

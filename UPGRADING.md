@@ -27,10 +27,10 @@ release gates below exist to catch the two ways a bump can break.
 
 ## Current pin
 
-- Upstream: `v1.3.1` (stable, released 2026-06-22; v1.3.0 went GA 2026-06-18).
-- Image: `ghcr.io/agentgateway/agentgateway:v1.3.1` (mirror `cr.agentgateway.dev/agentgateway:v1.3.1`).
+- Upstream: `v1.6.0` (stable, released 2026-10-02).
+- Image: `ghcr.io/agentgateway/agentgateway:v1.6.0` (mirror `cr.agentgateway.dev/agentgateway:v1.6.0`).
 - Image digest at packaging time:
-  `sha256:2e25455a0185f3c5a0e0f5e0f36ccc860c754d4d26632bfa5cc41c2f5bd35141`.
+  `sha256:9d3e6044ddcdc0878b1787f77bd401252b95e22684203fb5e874c4c42d2ed90c`.
 
 This is the first stable of the v1.3 line, which carries the rebuilt UI, AI cost analysis,
 virtual models, reusable providers, and guardrails. The binary lives at `/app/agentgateway`
@@ -45,8 +45,8 @@ Three checks gate every upstream bump. All are mandatory, not advice.
 ### Gate 1: binary and base linkage
 
 The agentgateway binary is dynamically linked against glibc. At the current pin it requires a
-maximum symbol version of `GLIBC_2.39`, which `cloudron/base:5.0.0` provides exactly. This is
-a tight match. A future upstream toolchain bump to `GLIBC_2.40` or higher would fail on this
+maximum symbol version of `GLIBC_2.39`, which `cloudron/base:6.0.0` (glibc 2.43) provides with room
+to spare. A future upstream toolchain bump past `GLIBC_2.43` would fail on this
 base, and it would fail at runtime, not at build time. So before shipping any new version,
 extract the new binary and run, against the target base image:
 

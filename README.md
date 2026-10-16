@@ -143,8 +143,8 @@ In the UI's settings, add an OpenAI-compatible connection:
 One caveat: the data-plane `/v1` route serves chat completions, not the model-list endpoint, so
 `GET /v1/models` returns an error and the UI's automatic model dropdown will not populate. Add the
 model name by hand and turn off the model-list fetch for that connection. Chat itself works
-normally, and streaming is recommended (it also avoids the cold-load timeout described under
-Updating and in DEBUGGING.md).
+normally, and streaming is recommended (it keeps bytes flowing, which helps with the client-side
+timeout described in DEBUGGING.md).
 
 ## Backup and restore
 

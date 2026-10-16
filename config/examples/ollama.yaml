@@ -22,10 +22,10 @@
 # written into this file. If your Ollama has no token, omit the backendAuth policy entirely (do not
 # invent a placeholder key). Note: agentgateway refuses to start if a referenced variable is unset.
 #
-# Performance: a large model on a CPU-only box can take longer than the reverse proxy's read window
-# to cold-load on the first request. Keep the model warm (set OLLAMA_KEEP_ALIVE on the Ollama app)
-# and prefer streaming clients; streamed tokens keep the connection alive. Streaming does not help
-# the very first cold load.
+# Performance: a large model on a CPU-only box can take longer than your client's timeout
+# to cold-load on the first request (Cloudron's proxy waits far longer). Keep the model warm (set OLLAMA_KEEP_ALIVE on the Ollama app)
+# and prefer streaming clients, or raise the client timeout. Streaming does not shorten the very
+# first cold load.
 
 - name: llm
   matches:

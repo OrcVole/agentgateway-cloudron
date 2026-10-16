@@ -12,8 +12,10 @@ in-place edit rather than fragile text substitution.
 
 ## Decision
 
-- **Node (npx):** provided by `cloudron/base:5.0.0` (Node 22.14.0). We do not install it; it is
-  pinned transitively by the base image digest.
+- **Node (npx):** since package 1.0.3 the package brings its own, because `cloudron/base:6.0.0` ships
+  no Node (base 5.0.0 supplied 22.14.0). Node 24.19.0 with npm and npx is copied from the pinned
+  `node:24.19.0-bookworm-slim` image to `/usr/local/node-24.19.0` and linked onto PATH. npm is a
+  runtime dependency because stdio MCP servers are launched with `npx`.
 - **uv and uvx:** install a pinned, checksum-verified static build from the upstream GitHub
   release.
 - **yq:** install a pinned, checksum-verified static binary (mikefarah yq), used by start.sh for
