@@ -6,7 +6,7 @@
 #
 # The official agentgateway image is distroless (Chainguard glibc-dynamic). We copy only the
 # single binary from it (the admin UI is embedded in that binary) onto cloudron/base. The
-# binary requires at most GLIBC_2.39, which cloudron/base:6.0.0 (glibc 2.43) provides with room to
+# binary requires at most GLIBC_2.39, which cloudron/base:6.0.1 (glibc 2.43) provides with room to
 # spare; every version bump must still re-run the linkage gate in UPGRADING.md.
 
 ARG AGENTGATEWAY_VERSION=v1.6.0
@@ -20,14 +20,14 @@ FROM ghcr.io/agentgateway/agentgateway:v1.6.0@sha256:9d3e6044ddcdc0878b1787f77bd
 # --- Stage 1b: Node, for stdio MCP servers launched with npx -----------------------------
 # cloudron/base 6 ships no Node (base 5 carried it). The package brings its own, from the
 # official image, at a versioned path of its own so a base bump cannot move it (field guide #291).
-FROM docker.io/library/node:24.19.0-bookworm-slim@sha256:a9f5f7c91a432850b2a8a7797adf5eadb6c733ceed61167806cee7ea7fbc29df AS node
+FROM docker.io/library/node:24.22.1-bookworm-slim@sha256:2dd9a4f758e173b65fee15388f7706af6fb01ef50cf7a2c0538711d67a6981ae AS node
 
 # --- Stage 2: the Cloudron app image -----------------------------------------------------
 # Pinned by digest per the Cloudron packaging skill (the final stage must be this exact base
-# so the file manager, web terminal, and log viewer work). Tag 6.0.0 = this digest.
-FROM docker.io/cloudron/base:6.0.0@sha256:9bed4c8fa880645f8e669041ee28febe941481d00e9445e3e5a5483cb541d09b
+# so the file manager, web terminal, and log viewer work). Tag 6.0.1 = this digest.
+FROM docker.io/cloudron/base:6.0.1@sha256:7b1e729960c3ca312d26e886917ba89483241bba0219ff292858e10d9d5768ee
 
-# cloudron/base:6.0.0 provides gosu, curl, tini and ca-certificates, but no Node.js. We add Node
+# cloudron/base:6.0.1 provides gosu, curl, tini and ca-certificates, but no Node.js. We add Node
 # (copied from the pinned node image, with npm and npx because the runtime calls them) and two
 # pinned, checksum-verified static tools:
 #   - uv  : runs uvx-based (Python) MCP servers out of the box.
@@ -53,23 +53,23 @@ RUN set -eux; \
     # sanity: every runtime tool must resolve in the final image
     uv --version; uvx --version; yq --version; gosu --version
 
-# Node 24.19.0 with npm and npx, at a versioned path, symlinked onto PATH. agentgateway launches
+# Node 24.22.1 with npm and npx, at a versioned path, symlinked onto PATH. agentgateway launches
 # stdio MCP servers with `npx`, so npm is a RUNTIME dependency, not only a build one.
-COPY --from=node /usr/local/bin/node /usr/local/node-24.19.0/bin/node
-COPY --from=node /usr/local/lib/node_modules/npm /usr/local/node-24.19.0/lib/node_modules/npm
+COPY --from=node /usr/local/bin/node /usr/local/node-24.22.1/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/node-24.22.1/lib/node_modules/npm
 RUN set -eux; \
-    ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/node-24.19.0/bin/npm; \
-    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/node-24.19.0/bin/npx; \
-    ln -s /usr/local/node-24.19.0/bin/node /usr/local/bin/node; \
-    ln -s /usr/local/node-24.19.0/bin/npm  /usr/local/bin/npm; \
-    ln -s /usr/local/node-24.19.0/bin/npx  /usr/local/bin/npx; \
-    ldd /usr/local/node-24.19.0/bin/node; \
-    if ldd /usr/local/node-24.19.0/bin/node 2>&1 | grep -q 'not found'; then echo "FATAL: node links a missing library"; exit 1; fi; \
-    test "$(/usr/local/node-24.19.0/bin/node --version)" = "v24.19.0"; \
-    /usr/local/node-24.19.0/bin/npm --version; \
-    /usr/local/node-24.19.0/bin/npx --version; \
+    ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/node-24.22.1/bin/npm; \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/node-24.22.1/bin/npx; \
+    ln -s /usr/local/node-24.22.1/bin/node /usr/local/bin/node; \
+    ln -s /usr/local/node-24.22.1/bin/npm  /usr/local/bin/npm; \
+    ln -s /usr/local/node-24.22.1/bin/npx  /usr/local/bin/npx; \
+    ldd /usr/local/node-24.22.1/bin/node; \
+    if ldd /usr/local/node-24.22.1/bin/node 2>&1 | grep -q 'not found'; then echo "FATAL: node links a missing library"; exit 1; fi; \
+    test "$(/usr/local/node-24.22.1/bin/node --version)" = "v24.22.1"; \
+    /usr/local/node-24.22.1/bin/npm --version; \
+    /usr/local/node-24.22.1/bin/npx --version; \
     node --version; npm --version; npx --version; \
-    echo "BUILD GATE OK: node v24.19.0, npm and npx at the runtime path"
+    echo "BUILD GATE OK: node v24.22.1, npm and npx at the runtime path"
 
 # The agentgateway binary (UI embedded). /app/code is read-only at runtime.
 COPY --from=upstream /app/agentgateway /app/code/agentgateway

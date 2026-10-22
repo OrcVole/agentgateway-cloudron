@@ -45,7 +45,7 @@ Three checks gate every upstream bump. All are mandatory, not advice.
 ### Gate 1: binary and base linkage
 
 The agentgateway binary is dynamically linked against glibc. At the current pin it requires a
-maximum symbol version of `GLIBC_2.39`, which `cloudron/base:6.0.0` (glibc 2.43) provides with room
+maximum symbol version of `GLIBC_2.39`, which `cloudron/base:6.0.1` (glibc 2.43) provides with room
 to spare. A future upstream toolchain bump past `GLIBC_2.43` would fail on this
 base, and it would fail at runtime, not at build time. So before shipping any new version,
 extract the new binary and run, against the target base image:

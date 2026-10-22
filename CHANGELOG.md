@@ -1,3 +1,9 @@
+[1.0.4]
+
+- Base image cloudron/base 6.0.0 to 6.0.1: Ubuntu security updates, including the removal of the
+  compromised eMudhra emSign ECC Root CA - G3 from the trusted certificates.
+- Node.js 24.19.0 to 24.22.1 (security release).
+
 [1.0.3]
 
 - Base image cloudron/base 5.0.0 to 6.0.0 (Ubuntu 26.04). Base 6 ships no Node, so the package now

@@ -12,9 +12,9 @@ in-place edit rather than fragile text substitution.
 
 ## Decision
 
-- **Node (npx):** since package 1.0.3 the package brings its own, because `cloudron/base:6.0.0` ships
-  no Node (base 5.0.0 supplied 22.14.0). Node 24.19.0 with npm and npx is copied from the pinned
-  `node:24.19.0-bookworm-slim` image to `/usr/local/node-24.19.0` and linked onto PATH. npm is a
+- **Node (npx):** since package 1.0.3 the package brings its own, because `cloudron/base:6.0.1` ships
+  no Node (base 5.0.0 supplied 22.14.0). Node 24.22.1 with npm and npx is copied from the pinned
+  `node:24.22.1-bookworm-slim` image to `/usr/local/node-24.22.1` and linked onto PATH. npm is a
   runtime dependency because stdio MCP servers are launched with `npx`.
 - **uv and uvx:** install a pinned, checksum-verified static build from the upstream GitHub
   release.
