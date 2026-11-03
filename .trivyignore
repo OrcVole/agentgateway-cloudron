@@ -1,0 +1,78 @@
+# Findings trivy-scan.sh may ignore, one ID per line, each with its reason beside it.
+#
+# Same doctrine as .scan-allowlist: every line is a REVIEWABLE CLAIM that the finding does not
+# apply to this package, never a way to quieten a real one. Empty is the normal state and a
+# non-empty file should be explained in the pull request that adds to it.
+#
+# Before adding a line, try the fix: a base-image bump, or a bump of the pinned tool. An exception
+# without an attempt at a fix is a decision the next maintainer inherits without the context.
+#
+# Format: <ID>  [# reason, and what would make this line go away]
+
+# DS-0002 (Dockerfile has no USER). Deliberate and required by the platform: Cloudron starts the
+# container as root so it can chown /app/data (a bind mount whose ownership is not ours), and
+# start.sh drops to the cloudron user with gosu before exec'ing agentgateway (start.sh:95). A USER
+# line here would break the chown and the app would not start. This line goes away only if Cloudron
+# changes that convention.
+DS-0002
+
+# ---------------------------------------------------------------------------- #
+# The upstream binary's own Go dependencies.
+#
+# These are compiled into the agentgateway release binary. This repository does not patch or
+# rebuild upstream (AGENTS.md, section 2), so the fix does not exist here: it arrives with the
+# next upstream release that rebuilds against a patched toolchain. Verified against the published
+# image for 1.0.5; the first run of this gate is what surfaced them.
+#
+# Removal condition: the next AGENTGATEWAY_VERSION bump, after re-running this gate. If a bump
+# does not clear a line here, that is a question for upstream rather than a reason to keep the
+# exception.
+CVE-2025-61726
+CVE-2025-61729
+CVE-2025-68121
+CVE-2026-111943
+CVE-2026-115905
+CVE-2026-115907
+CVE-2026-115908
+CVE-2026-115909
+CVE-2026-25679
+CVE-2026-27145
+CVE-2026-32280
+CVE-2026-32281
+CVE-2026-32283
+CVE-2026-33811
+CVE-2026-33814
+CVE-2026-33818
+CVE-2026-39820
+CVE-2026-39821
+CVE-2026-39822
+CVE-2026-39836
+CVE-2026-42499
+CVE-2026-42504
+CVE-2026-46600
+CVE-2026-56851
+CVE-2026-56852
+CVE-2026-56853
+CVE-2026-56858
+CVE-2026-56859
+CVE-2026-56860
+CVE-2026-56862
+CVE-2026-78667
+CVE-2026-78669
+CVE-2026-97031
+
+# ---------------------------------------------------------------------------- #
+# The Ubuntu base layer.
+#
+# One advisory in libbrotli-dev, fixed in a package version that cloudron/base has not shipped
+# yet (6.0.1 is current, 2026-10-21). Not actionably fixable from this repository.
+#
+# Removal condition: the next cloudron/base bump.
+CVE-2026-111497
+
+# ---------------------------------------------------------------------------- #
+# Deliberately NOT excepted: the npm dependencies (brace-expansion, undici) found in the same
+# scan. They ship inside npm's own node_modules, so a Node bump is the fix, and this change
+# carries one (24.22.1 to 24.22.2). If the first CI run still reports them, the answer is an npm
+# bump or an upstream Node release, not a line here.
+# npm findings seen on 1.0.5: CVE-2026-102276, CVE-2026-102278, CVE-2026-109383, CVE-2026-109869, CVE-2026-19534, CVE-2026-87018

@@ -92,7 +92,7 @@ Current pins (confirm at build time, see below):
 |--------------------------|------------------------------|-------|
 | agentgateway (upstream)  | `v1.7.0`                     | Current stable, released 2026-10-27. Verified to run on the base, see below. |
 | agentgateway image       | `ghcr.io/agentgateway/agentgateway:v1.7.0` | Mirror: `cr.agentgateway.dev/agentgateway:v1.7.0`. Roughly 88 MB, single binary at `/app/agentgateway`, UI embedded, default user 65532. |
-| Cloudron base image      | `cloudron/base:6.0.1`        | Ubuntu 26.04, glibc 2.43. Bundles gosu, curl, tini, ca-certificates; no Node, so the package copies in Node 24.22.1 with npm and npx. |
+| Cloudron base image      | `cloudron/base:6.0.1`        | Ubuntu 26.04, glibc 2.43. Bundles gosu, curl, tini, ca-certificates; no Node, so the package copies in Node 24.22.2 with npm and npx. |
 | Cloudron box (target)    | `9.1.x`                      | Our box is on the 9.1 line. |
 
 The agentgateway v1.7.0 binary requires a maximum symbol version of `GLIBC_2.39`, which the base

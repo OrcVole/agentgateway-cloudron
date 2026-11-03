@@ -1,0 +1,121 @@
+name: CI
+
+# The same gates as .forgejo/workflows/pr-checks.yml, for the pull requests that are opened
+# here instead of on the main forge. Before this file existed, a GitHub pull request showed no
+# checks at all: the gates lived in one workflow aimed at a Forgejo runner, so "waiting for CI"
+# on GitHub was waiting forever, and a reviewer had no signal beyond reading the diff.
+#
+# The split is deliberate and thin. The scripts are the single source of truth; this file is an
+# adapter that builds an image and calls them. If a gate changes, it changes in test/*.sh and
+# both forges get the change. If a TOOL is pinned (trivy below), it is pinned in both workflow
+# files, and test/trivy-scan.sh enforces a minimum version so a drift in one of them is a
+# visible failure rather than a weaker scan.
+#
+# What is NOT here, and why: nothing that needs a live Cloudron (backup-restore, upgrade,
+# SSO topology). Those belong on the proving ground, not in CI, on either forge.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # One tag for the whole job: every gate must inspect the same artefact, or secret-scan proves
+  # something other than what smoke tested.
+  IMAGE: ci-${{ github.run_id }}-${{ github.run_attempt }}
+
+jobs:
+  gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: secret-scan and trivy both read more than HEAD.
+          fetch-depth: 0
+
+      - name: build the image the gates inspect
+        run: docker build -t "$IMAGE" .
+
+      # secret-scan reads .anonymize-list for the box, identity and session strings. That file is
+      # GITIGNORED on purpose, so it is absent from every checkout: without it the scan still runs
+      # but proves far less while reporting green. Ask the script whether it needs the file rather
+      # than assuming, and refuse to continue without it, exactly as the main-forge workflow does.
+      - name: restore the anonymity denylist
+        env:
+          ANONYMIZE_LIST: ${{ secrets.ANONYMIZE_LIST }}
+        run: |
+          set -euo pipefail
+          if ! grep -q 'anonymize-list' test/secret-scan.sh; then
+            echo "this package's scanner carries its patterns inline; no denylist needed"
+            exit 0
+          fi
+          if [ -z "${ANONYMIZE_LIST:-}" ]; then
+            echo "ANONYMIZE_LIST is not set for this repository, and this package's scanner reads it."
+            echo "The scan would run without its box and identity patterns and report a green check"
+            echo "that proves much less than it appears to. Set the secret (contents of"
+            echo ".anonymize-list) in this repository's settings."
+            exit 1
+          fi
+          printf '%s\n' "$ANONYMIZE_LIST" > .anonymize-list
+          echo "denylist restored: $(grep -cvE '^\s*(#|$)' .anonymize-list) patterns"
+
+      # First, because a leaked secret is the one failure that cannot be undone after a push.
+      # ENGINE=docker: the scripts default to podman and fall back to docker, and these runners
+      # have docker only. Being explicit keeps the log honest about which engine ran.
+      - name: secret-scan
+        env:
+          ENGINE: docker
+        run: test/secret-scan.sh "$IMAGE"
+
+      - name: smoke
+        env:
+          ENGINE: docker
+        run: |
+          if [ -x test/smoke.sh ]; then
+            test/smoke.sh "$IMAGE"
+          else
+            echo "no test/smoke.sh in this package - skipping (this is expected for 4 of 18)"
+          fi
+
+      # Pinned, with a published checksum, and kept in step with .forgejo/workflows/pr-checks.yml.
+      # An unpinned scanner's rule set moves under you and turns a green history red with no change
+      # of ours; a scanner that never installs turns it green for the wrong reason.
+      - name: install the pinned trivy
+        run: |
+          set -euo pipefail
+          TRIVY_VERSION=0.76.1
+          TRIVY_SHA256=c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+          curl -fsSL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: trivy-scan
+        env:
+          # The bill of materials for exactly the image the gate just inspected, published as a
+          # build artefact: it is what an assessor asks for, and it is unreconstructable later if
+          # the image is gone.
+          SCAN_SBOM: sbom.cdx.json
+        run: test/trivy-scan.sh "$IMAGE"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: clean up
+        if: always()
+        run: |
+          rm -f .anonymize-list || true
+          docker rmi -f "$IMAGE" || true

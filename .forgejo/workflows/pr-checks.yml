@@ -1,9 +1,9 @@
-# .forgejo/workflows/pr-checks.yml — the merge button becomes the gate.
+# .forgejo/workflows/pr-checks.yml - the merge button becomes the gate.
 #
 # PROVEN 2026-08-09. Written 2026-08-08 and since executed against real packages: the full path on a
 # two-surface scanner with a denylist secret, and the inline-patterns path on a package with none.
 # Both green, and its first runs found two defects in the checking apparatus rather than in any
-# package — which is the argument for running a gate before trusting it.
+# package - which is the argument for running a gate before trusting it.
 #
 # NOTE THIS FILE IS PUBLISHABLE and is scanned by test/secret-scan.sh like everything else. An
 # earlier draft named the forge host and the runner machine in these comments and was caught by the
@@ -21,20 +21,20 @@
 #   * There is NO docker daemon on the workstation. Rootless podman is the engine, and the unit sets
 #     DOCKER_HOST to its socket so a script asking for docker still finds one.
 #   * The job inherits the runner unit's PATH, nothing more. node is on it (JS actions need it) but
-#     it is an nvm path carrying a version number — see the unit's own comment.
+#     it is an nvm path carrying a version number - see the unit's own comment.
 #   * The workspace is a real directory on a real machine, not a fresh container. Steps must not
 #     assume a clean filesystem beyond their own checkout.
 #
 # THE EXPERIMENT THIS SERVES ("Update-as-PR", doctrine/cloudron-packaging-experiments.md)
-# A detected upstream release arrives as a pull request — pin, manifest (including dockerImage) and
-# a draft feed entry — and the two gates that can run without the rig run as checks on it. The human
+# A detected upstream release arrives as a pull request - pin, manifest (including dockerImage) and
+# a draft feed entry - and the two gates that can run without the rig run as checks on it. The human
 # gate stops being "remember to run the scripts" and becomes the merge button, which is the one
 # control that cannot be forgotten.
 #
 # WHY THESE TWO GATES AND NOT THE OTHERS
 #   test/secret-scan.sh  present in all 18 packages. Scans the publishable file set AND the built
 #                        image, so it needs the image built first. This is the gate whose failure is
-#                        unrecoverable after the fact — once pushed, it is public — so it runs first.
+#                        unrecoverable after the fact - once pushed, it is public - so it runs first.
 #   test/smoke.sh        present in 14 of 18. Explicitly "no box required": it runs the image the way
 #                        Cloudron does and asserts the package contract. Skipped where absent rather
 #                        than failing, because four packages legitimately have no smoke gate.
@@ -68,7 +68,7 @@ jobs:
       # secret-scan's box, identity and session patterns live in `.anonymize-list`, which is
       # GITIGNORED by design (so the published script never carries the strings it hunts for) and is
       # therefore ABSENT FROM EVERY CI CHECKOUT. Without it the scan still runs, but only against
-      # generic credential shapes — it quietly becomes a much weaker gate that still reports green.
+      # generic credential shapes - it quietly becomes a much weaker gate that still reports green.
       #
       # Measured on this workflow's own first run, 2026-08-08: an earlier draft of this file named
       # the forge host in a comment. CI passed it. The same scan run locally, where the denylist
@@ -80,7 +80,7 @@ jobs:
       # Required only where the scanner actually reads the file. Two generations of secret-scan.sh
       # exist across the estate: most read `.anonymize-list`, but langfuse, prosody and windmill
       # carry their patterns INLINE and need no secret. Demanding one there would be a gate that can
-      # never pass, for nothing — so ask the script what it needs rather than assuming.
+      # never pass, for nothing - so ask the script what it needs rather than assuming.
       #
       # The value arrives via `env:`, not by interpolating into the shell: denylists are multi-line
       # and a bare `${{ }}` inside a test expression breaks the moment one contains a quote.
@@ -107,7 +107,7 @@ jobs:
       # denylists were unified and eight packages had their image surface scanned for the first time.
       # That pass is done: 222 repo-surface hits went to 0, and 746 image-surface hits went to 0,
       # every one of them a false positive with a nameable cause. It is REMOVED, deliberately, so
-      # this gate can fail a build again. Do not reintroduce it to quieten a finding — fix the
+      # this gate can fail a build again. Do not reintroduce it to quieten a finding - fix the
       # pattern, then the file, and only then declare an exception in .scan-allowlist.
       - name: secret-scan
         run: test/secret-scan.sh "$IMAGE"
@@ -118,10 +118,50 @@ jobs:
           if [ -x test/smoke.sh ]; then
             test/smoke.sh "$IMAGE"
           else
-            echo "no test/smoke.sh in this package — skipping (this is expected for 4 of 18)"
+            echo "no test/smoke.sh in this package - skipping (this is expected for 4 of 18)"
           fi
 
-      # Host mode leaves both the image AND the workspace on a shared machine — this is not a
+      # Known vulnerabilities in the artefact that is about to be published. Runs after smoke for
+      # the same reason smoke does: both need the image built, and there is no point scanning an
+      # image whose package contract already failed.
+      #
+      # trivy is installed here at a PINNED version with a published checksum, in the same spirit as
+      # the rest of this file: an unpinned scanner's rule set moves under you and turns a green
+      # history red with no change of ours. Bump it in its own commit, with the reason, and update
+      # TRIVY_MIN_VERSION in test/trivy-scan.sh at the same time.
+      #
+      # TRIVY_REPORT_ONLY is NOT set. If the first run is noisy, triage the findings and fix them;
+      # do not add the escape hatch to the workflow.
+      - name: install the pinned trivy
+        run: |
+          set -euo pipefail
+          TRIVY_VERSION=0.76.1
+          TRIVY_SHA256=c7cbe3137fb8a48a17574bede3dd6beb16742d1e9772929940fc90082c39d9c0
+          curl -fsSL -o /tmp/trivy.tar.gz \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "${TRIVY_SHA256}  /tmp/trivy.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/trivy.tar.gz -C /tmp trivy
+          install -m 0755 /tmp/trivy "$HOME/.local/bin/trivy" 2>/dev/null || sudo install -m 0755 /tmp/trivy /usr/local/bin/trivy
+          trivy --version
+
+      - name: trivy-scan
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          # The bill of materials comes from the same image this gate inspects, in the same run, so
+          # the two cannot disagree about what was scanned. Wired here as well as on the other
+          # forge: this is where a merge actually happens.
+          export SCAN_SBOM=sbom.cdx.json
+          test/trivy-scan.sh "$IMAGE"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: always()
+        with:
+          name: sbom-cyclonedx
+          path: sbom.cdx.json
+          if-no-files-found: warn
+          retention-days: 90
+
+      # Host mode leaves both the image AND the workspace on a shared machine - this is not a
       # container that vanishes. So remove the image rather than accumulating one per PR, and delete
       # the restored denylist rather than leaving the estate's identity strings sitting in a
       # checkout. `|| true`: a failed cleanup must never fail a passing gate.

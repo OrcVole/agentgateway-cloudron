@@ -20,7 +20,7 @@ FROM ghcr.io/agentgateway/agentgateway:v1.7.0@sha256:60216aafb03d37f94e952ff3d51
 # --- Stage 1b: Node, for stdio MCP servers launched with npx -----------------------------
 # cloudron/base 6 ships no Node (base 5 carried it). The package brings its own, from the
 # official image, at a versioned path of its own so a base bump cannot move it (field guide #291).
-FROM docker.io/library/node:24.22.1-bookworm-slim@sha256:2dd9a4f758e173b65fee15388f7706af6fb01ef50cf7a2c0538711d67a6981ae AS node
+FROM docker.io/library/node:24.22.2-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS node
 
 # --- Stage 2: the Cloudron app image -----------------------------------------------------
 # Pinned by digest per the Cloudron packaging skill (the final stage must be this exact base
@@ -33,10 +33,10 @@ FROM docker.io/cloudron/base:6.0.1@sha256:7b1e729960c3ca312d26e886917ba89483241b
 #   - uv  : runs uvx-based (Python) MCP servers out of the box.
 #   - yq  : lets start.sh re-assert config.adminAddr on every boot (the UI can rewrite the
 #           config file, and the genuine admin default binds localhost only).
-ARG UV_VERSION=0.11.8
-ARG UV_SHA256=56dd1b66701ecb62fe896abb919444e4b83c5e8645cca953e6ddd496ff8a0feb
-ARG YQ_VERSION=v4.53.3
-ARG YQ_SHA256=fa52a4e758c63d38299163fbdd1edfb4c4963247918bf9c1c5d31d84789eded4
+ARG UV_VERSION=0.13.7
+ARG UV_SHA256=c5221ff41b7892bfc223543883600125f6a47fe845093e0f5bdff4f359196d83
+ARG YQ_VERSION=v4.54.1
+ARG YQ_SHA256=8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
 
 RUN set -eux; \
     # uv + uvx
@@ -53,23 +53,23 @@ RUN set -eux; \
     # sanity: every runtime tool must resolve in the final image
     uv --version; uvx --version; yq --version; gosu --version
 
-# Node 24.22.1 with npm and npx, at a versioned path, symlinked onto PATH. agentgateway launches
+# Node 24.22.2 with npm and npx, at a versioned path, symlinked onto PATH. agentgateway launches
 # stdio MCP servers with `npx`, so npm is a RUNTIME dependency, not only a build one.
-COPY --from=node /usr/local/bin/node /usr/local/node-24.22.1/bin/node
-COPY --from=node /usr/local/lib/node_modules/npm /usr/local/node-24.22.1/lib/node_modules/npm
+COPY --from=node /usr/local/bin/node /usr/local/node-24.22.2/bin/node
+COPY --from=node /usr/local/lib/node_modules/npm /usr/local/node-24.22.2/lib/node_modules/npm
 RUN set -eux; \
-    ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/node-24.22.1/bin/npm; \
-    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/node-24.22.1/bin/npx; \
-    ln -s /usr/local/node-24.22.1/bin/node /usr/local/bin/node; \
-    ln -s /usr/local/node-24.22.1/bin/npm  /usr/local/bin/npm; \
-    ln -s /usr/local/node-24.22.1/bin/npx  /usr/local/bin/npx; \
-    ldd /usr/local/node-24.22.1/bin/node; \
-    if ldd /usr/local/node-24.22.1/bin/node 2>&1 | grep -q 'not found'; then echo "FATAL: node links a missing library"; exit 1; fi; \
-    test "$(/usr/local/node-24.22.1/bin/node --version)" = "v24.22.1"; \
-    /usr/local/node-24.22.1/bin/npm --version; \
-    /usr/local/node-24.22.1/bin/npx --version; \
+    ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/node-24.22.2/bin/npm; \
+    ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/node-24.22.2/bin/npx; \
+    ln -s /usr/local/node-24.22.2/bin/node /usr/local/bin/node; \
+    ln -s /usr/local/node-24.22.2/bin/npm  /usr/local/bin/npm; \
+    ln -s /usr/local/node-24.22.2/bin/npx  /usr/local/bin/npx; \
+    ldd /usr/local/node-24.22.2/bin/node; \
+    if ldd /usr/local/node-24.22.2/bin/node 2>&1 | grep -q 'not found'; then echo "FATAL: node links a missing library"; exit 1; fi; \
+    test "$(/usr/local/node-24.22.2/bin/node --version)" = "v24.22.2"; \
+    /usr/local/node-24.22.2/bin/npm --version; \
+    /usr/local/node-24.22.2/bin/npx --version; \
     node --version; npm --version; npx --version; \
-    echo "BUILD GATE OK: node v24.22.1, npm and npx at the runtime path"
+    echo "BUILD GATE OK: node v24.22.2, npm and npx at the runtime path"
 
 # The agentgateway binary (UI embedded). /app/code is read-only at runtime.
 COPY --from=upstream /app/agentgateway /app/code/agentgateway

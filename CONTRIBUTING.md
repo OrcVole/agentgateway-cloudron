@@ -31,6 +31,19 @@ rules that this file assumes.
    Use `--debug` while iterating (see DEBUGGING.md).
 4. **Test:** run the smoke-test ladder in DEBUGGING.md ("Verifying a deploy"). A change is
    not done until it passes.
+
+   Two gates run on every pull request and are worth running before you push, because both need
+   the image built and both fail for reasons that are easier to read locally:
+
+   ```bash
+   test/secret-scan.sh "$IMAGE"   # does this artefact leak something of ours
+   test/trivy-scan.sh "$IMAGE"    # does this artefact ship something known to be broken
+   ```
+
+   `trivy-scan.sh` also scans the build manifests. It fails on HIGH and CRITICAL findings, prints
+   the ones with no fix available without enforcing them, and treats a scan that cannot complete
+   as a failure rather than a pass. Exceptions go in `.trivyignore`, one line each, with the reason
+   and what would remove it. See `docs/decisions/0005-vulnerability-gate.md`.
 5. **Document:** update the docs your change touches. Code and docs ship together.
 6. **Commit:** one concern per commit, with a message that states the symptom fixed or the
    behaviour added.

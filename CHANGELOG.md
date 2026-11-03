@@ -1,3 +1,19 @@
+[1.0.6]
+
+- Add a known-vulnerability gate (`test/trivy-scan.sh`, wired into the PR checks): the built image
+  and the build manifests are scanned for HIGH and CRITICAL findings, unfixed advisories are printed
+  but not enforced, and a scan that cannot run fails rather than passing. See
+  `docs/decisions/0005-vulnerability-gate.md`. The first run found `DS-0002` (no `USER` in the
+  Dockerfile), which is allowlisted with its reason: Cloudron's root entrypoint is what lets
+  `start.sh` chown `/app/data` and drop to `cloudron` via `gosu`.
+- Bump uv 0.11.8 to 0.13.7 and yq v4.53.3 to v4.54.1. Both are verified against the digests the
+  upstream projects publish, not just against the download.
+- Bump Node 24.22.1 to 24.22.2 (patch), with the image digest re-pinned and the runtime path moved
+  to `/usr/local/node-24.22.2`.
+- CI publishes a CycloneDX software bill of materials for every build, from the same image the
+  gate inspects (`SCAN_SBOM`), so "what shipped" is answerable later without the image.
+- No upstream agentgateway change: v1.7.0 remains current.
+
 [1.0.5]
 
 - Upstream agentgateway 1.6.0 to 1.7.0. Model catalog with context windows and capabilities in
